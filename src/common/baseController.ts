@@ -6,35 +6,35 @@ import 'reflect-metadata'
 
 @injectable()
 export abstract class BaseController {
-	private readonly _router: Router
+  private readonly _router: Router
 
-	constructor(private logger: ILogger) {
-		this._router = Router()
-	}
+  constructor(private logger: ILogger) {
+    this._router = Router()
+  }
 
-	get router() {
-		return this._router
-	}
+  get router() {
+    return this._router
+  }
 
-	public created(res: Response) {
-		res.sendStatus(201)
-	}
+  public created(res: Response) {
+    res.sendStatus(201)
+  }
 
-	public send<T>(res: Response, code: number, message: T): Response<any, Record<string, any>> {
-		res.type('application/json')
-		return res.status(code).json(message)
-	}
+  public send<T>(res: Response, code: number, message: T): Response<any, Record<string, any>> {
+    res.type('application/json')
+    return res.status(code).json(message)
+  }
 
-	protected ok<T>(res: Response, message: T) {
-		return this.send<T>(res, 200, message)
-	}
+  protected ok<T>(res: Response, message: T) {
+    return this.send<T>(res, 200, message)
+  }
 
-	protected bindRoutes(routes: ControllerRoute[]) {
-		for (const route of routes) {
-			this.logger.log(`[${route.method}] ${route.path}`)
-			const handler = route.func.bind(this)
+  protected bindRoutes(routes: ControllerRoute[]) {
+    for (const route of routes) {
+      this.logger.log(`[${route.method}] ${route.path}`)
+      const handler = route.func.bind(this)
 
-			this.router[route.method](route.path, handler)
-		}
-	}
+      this.router[route.method](route.path, handler)
+    }
+  }
 }
