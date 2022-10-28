@@ -1,3 +1,4 @@
+import { ValidateMiddleware } from './../common/validate.middleware'
 import { IUserService } from './users.service.interface'
 import { UserRegisterDto } from './dto/user-register.dto'
 import { IUserController } from './users.interface'
@@ -19,7 +20,12 @@ export class UserController extends BaseController implements IUserController {
   ) {
     super(loggerService)
     this.bindRoutes([
-      { path: '/register', method: 'post', func: this.register },
+      {
+        path: '/register',
+        method: 'post',
+        func: this.register,
+        middlewares: [new ValidateMiddleware(UserRegisterDto)],
+      },
       { path: '/login', method: 'post', func: this.login },
     ])
   }
