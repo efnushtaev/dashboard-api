@@ -1,3 +1,4 @@
+import { ConfigService } from './../config/config.service'
 import { ValidateMiddleware } from './../common/validate.middleware'
 import { IUserService } from './users.service.interface'
 import { UserRegisterDto } from './dto/user-register.dto'
@@ -10,13 +11,15 @@ import { ILogger } from '../logger/logger.interface'
 import { inject, injectable } from 'inversify'
 import 'reflect-metadata'
 import { UserLoginDto } from './dto/user-login.dto'
-import { User } from './user.entity'
+import { sign } from 'jsonwebtoken'
+import { IConfigService } from '../config/config.service.interface'
 
 @injectable()
 export class UserController extends BaseController implements IUserController {
   constructor(
     @inject(TYPES.ILogger) private loggerService: ILogger,
     @inject(TYPES.UserService) private userService: IUserService,
+    @inject(TYPES.ConfigService) private configService: IConfigService,
   ) {
     super(loggerService)
     this.bindRoutes([
@@ -26,13 +29,45 @@ export class UserController extends BaseController implements IUserController {
         func: this.register,
         middlewares: [new ValidateMiddleware(UserRegisterDto)],
       },
-      { path: '/login', method: 'post', func: this.login },
+      {
+        path: '/login',
+        method: 'post',
+        func: this.login,
+        middlewares: [new ValidateMiddleware(UserLoginDto)],
+      },
     ])
   }
 
-  login({ body }: Request<{}, {}, UserLoginDto>, res: Response, next: NextFunction) {
-    console.log(body)
-    next(new HTTPError(401, 'Ошибка авторизации', 'login'))
+  private signJWT(email: string, secret: string) {
+    return new Promise<string>((resolve, reject) => {
+      sign(
+        {
+          email,
+          iat: Math.floor(Date.now() / 1000),
+        },
+        secret,
+        {
+          algorithm: 'HS256',
+        },
+        (err, token) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(token || '')
+          }
+        },
+      )
+    })
+  }
+
+  async login({ body }: Request<{}, {}, UserLoginDto>, res: Response, next: NextFunction) {
+    const result = await this.userService.validateUser(body)
+    if (!result) {
+      return next(new HTTPError(401, 'Ошибка авторизации', 'login'))
+    }
+
+    const jwt = await this.signJWT(body.email, this.configService.get('SECRET'))
+    return this.ok(res, { jwt })
   }
 
   async register(
